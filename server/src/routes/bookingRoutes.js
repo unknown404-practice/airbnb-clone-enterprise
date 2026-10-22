@@ -6,10 +6,11 @@ import {
   cancelBooking,
 } from '../controllers/bookingController.js';
 import { requireAuth } from '../middleware/auth.js';
+import { validate, bookingSchemas } from '../middleware/validate.js';
 
 const router = express.Router();
 
-router.post('/', requireAuth, createBooking);
+router.post('/', requireAuth, validate(bookingSchemas.create), createBooking);
 router.get('/my-trips', requireAuth, getMyBookings);
 router.get('/:id', requireAuth, getBookingById);
 router.patch('/:id/cancel', requireAuth, cancelBooking);

@@ -5,12 +5,14 @@ import {
   logout,
   getMe,
   switchRole,
+  refreshToken,
 } from '../controllers/authController.js';
 import { requireAuth } from '../middleware/auth.js';
+import { validate, authSchemas } from '../middleware/validate.js';
 
 const router = express.Router();
 
-router.post('/register', register);
+router.post('/register', validate(authSchemas.register), register);
 router.get('/register', (req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -19,7 +21,7 @@ router.get('/register', (req, res) => {
   });
 });
 
-router.post('/login', login);
+router.post('/login', validate(authSchemas.login), login);
 router.get('/login', (req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -31,6 +33,7 @@ router.get('/login', (req, res) => {
     ]
   });
 });
+router.post('/refresh', refreshToken);
 router.post('/logout', logout);
 router.get('/me', requireAuth, getMe);
 router.post('/switch-role', requireAuth, switchRole);

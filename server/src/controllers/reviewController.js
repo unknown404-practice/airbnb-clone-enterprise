@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Review from '../models/Review.js';
 import Listing from '../models/Listing.js';
 import Booking from '../models/Booking.js';
@@ -50,13 +51,23 @@ export const createReview = async (req, res, next) => {
       comment,
     });
 
-    // Recalculate listing ratingAvg and reviewCount
-    const allReviews = await Review.find({ listing: listingId });
-    const count = allReviews.length;
-    const avg = allReviews.reduce((sum, r) => sum + r.rating, 0) / count;
+    // Recalculate listing ratingAvg and reviewCount atomically via MongoDB Aggregation Pipeline
+    const stats = await Review.aggregate([
+      { $match: { listing: new mongoose.Types.ObjectId(listingId) } },
+      {
+        $group: {
+          _id: '$listing',
+          ratingAvg: { $avg: '$rating' },
+          reviewCount: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const count = stats.length > 0 ? stats[0].reviewCount : 0;
+    const avg = stats.length > 0 ? Math.round(stats[0].ratingAvg * 100) / 100 : 0;
 
     listing.reviewCount = count;
-    listing.ratingAvg = Math.round(avg * 100) / 100;
+    listing.ratingAvg = avg;
     await listing.save();
 
     const populatedReview = await Review.findById(review._id).populate('author', 'name avatar');

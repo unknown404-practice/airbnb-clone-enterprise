@@ -23,6 +23,7 @@ import { useListings } from '../context/ListingContext';
 import WishlistHeart from '../components/WishlistHeart';
 import ListingMap from '../components/ListingMap';
 import TripReceiptModal from '../components/TripReceiptModal';
+import DualMonthCalendar from '../components/DualMonthCalendar';
 
 export default function ListingDetailPage() {
   const { id } = useParams();
@@ -354,6 +355,22 @@ export default function ListingDetailPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Interactive Dual-Month Strike-Through Calendar */}
+          <div id="booking-calendar">
+            <DualMonthCalendar
+              checkIn={checkIn}
+              checkOut={checkOut}
+              onSelectCheckIn={(date) => setCheckIn(date)}
+              onSelectCheckOut={(date) => setCheckOut(date)}
+              onClear={() => {
+                setCheckIn('');
+                setCheckOut('');
+              }}
+              isDateBooked={isDateBooked}
+              city={listing.location?.city}
+            />
           </div>
         </div>
 

@@ -1,12 +1,35 @@
+import mongoose from 'mongoose';
 import Booking from '../models/Booking.js';
 import Listing from '../models/Listing.js';
 
 // POST /api/bookings
 export const createBooking = async (req, res, next) => {
+  let session = null;
+  let useTransaction = false;
+
+  // Check if MongoDB deployment supports replica-set ACID transactions (Atlas / ReplicaSet)
+  const topologyType = mongoose.connection.client?.topology?.description?.type;
+  const supportsTransactions = topologyType && topologyType !== 'Single';
+
+  if (supportsTransactions) {
+    try {
+      session = await mongoose.startSession();
+      session.startTransaction();
+      useTransaction = true;
+    } catch (sessErr) {
+      if (session) {
+        await session.endSession().catch(() => {});
+        session = null;
+      }
+      useTransaction = false;
+    }
+  }
+
   try {
     const { listingId, checkIn, checkOut, guestsCount } = req.body;
 
     if (!listingId || !checkIn || !checkOut) {
+      if (useTransaction && session) await session.abortTransaction();
       return res.status(400).json({
         success: false,
         message: 'Please provide listing ID, check-in date, and check-out date',
@@ -18,6 +41,7 @@ export const createBooking = async (req, res, next) => {
 
     // Validate dates
     if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
+      if (useTransaction && session) await session.abortTransaction();
       return res.status(400).json({
         success: false,
         message: 'Invalid check-in or check-out date format',
@@ -25,6 +49,7 @@ export const createBooking = async (req, res, next) => {
     }
 
     if (checkInDate >= checkOutDate) {
+      if (useTransaction && session) await session.abortTransaction();
       return res.status(400).json({
         success: false,
         message: 'Check-out date must be strictly after check-in date',
@@ -35,14 +60,19 @@ export const createBooking = async (req, res, next) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (checkInDate < today) {
+      if (useTransaction && session) await session.abortTransaction();
       return res.status(400).json({
         success: false,
         message: 'Check-in date cannot be in the past',
       });
     }
 
-    const listing = await Listing.findById(listingId);
+    const listingQuery = Listing.findById(listingId);
+    if (useTransaction && session) listingQuery.session(session);
+    const listing = await listingQuery;
+
     if (!listing) {
+      if (useTransaction && session) await session.abortTransaction();
       return res.status(404).json({
         success: false,
         message: 'Listing not found',
@@ -51,6 +81,7 @@ export const createBooking = async (req, res, next) => {
 
     // Prevent host from booking their own listing
     if (listing.host.toString() === req.user.id) {
+      if (useTransaction && session) await session.abortTransaction();
       return res.status(400).json({
         success: false,
         message: 'You cannot book your own listing',
@@ -60,22 +91,26 @@ export const createBooking = async (req, res, next) => {
     // Validate guest capacity
     const numGuests = Number(guestsCount) || 1;
     if (numGuests > listing.maxGuests) {
+      if (useTransaction && session) await session.abortTransaction();
       return res.status(400).json({
         success: false,
         message: `Maximum allowed guests for this listing is ${listing.maxGuests}`,
       });
     }
 
-    // CRITICAL: Database-level overlap validation
+    // CRITICAL: Database-level overlap validation inside transaction / session
     // Confirmed booking where: (existing.checkIn < newCheckOut) AND (existing.checkOut > newCheckIn)
-    const existingConflict = await Booking.findOne({
+    const conflictQuery = Booking.findOne({
       listing: listingId,
       status: 'confirmed',
       checkIn: { $lt: checkOutDate },
       checkOut: { $gt: checkInDate },
     });
+    if (useTransaction && session) conflictQuery.session(session);
+    const existingConflict = await conflictQuery;
 
     if (existingConflict) {
+      if (useTransaction && session) await session.abortTransaction();
       return res.status(409).json({
         success: false,
         message: 'Selected dates overlap with an existing booking. Please select different dates.',
@@ -94,7 +129,7 @@ export const createBooking = async (req, res, next) => {
     const serviceFee = Math.round(basePrice * 0.14); // 14% Airbnb service fee
     const totalPrice = basePrice + cleaningFee + serviceFee;
 
-    const booking = await Booking.create({
+    const bookingPayload = {
       listing: listingId,
       guest: req.user.id,
       checkIn: checkInDate,
@@ -105,7 +140,16 @@ export const createBooking = async (req, res, next) => {
       serviceFee,
       guestsCount: numGuests,
       status: 'confirmed',
-    });
+    };
+
+    let booking;
+    if (useTransaction && session) {
+      const createdArray = await Booking.create([bookingPayload], { session });
+      booking = createdArray[0];
+      await session.commitTransaction();
+    } else {
+      booking = await Booking.create(bookingPayload);
+    }
 
     const populatedBooking = await Booking.findById(booking._id)
       .populate('listing', 'title location images pricePerNight cleaningFee')
@@ -125,7 +169,18 @@ export const createBooking = async (req, res, next) => {
       },
     });
   } catch (err) {
+    if (useTransaction && session) {
+      try {
+        await session.abortTransaction();
+      } catch (abortErr) {
+        // ignore abort errors
+      }
+    }
     next(err);
+  } finally {
+    if (session) {
+      await session.endSession().catch(() => {});
+    }
   }
 };
 

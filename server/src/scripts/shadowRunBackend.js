@@ -1,4 +1,10 @@
+import app from '../app.js';
+import { connectDB, disconnectDB } from '../config/db.js';
+import Listing from '../models/Listing.js';
+import { seedDatabase } from '../seeds/seed.js';
+
 const BASE_URL = 'http://localhost:5000';
+let localServer = null;
 
 const results = [];
 
@@ -12,12 +18,47 @@ function logFail(name, error) {
   console.error(`[FAIL] ${name}:`, error?.message || error);
 }
 
+async function ensureServerRunning() {
+  try {
+    const res = await fetch(`${BASE_URL}/api/health`, { signal: AbortSignal.timeout(1200) });
+    if (res.ok) {
+      console.log('[Runner] Active backend server detected on port 5000.\n');
+      return;
+    }
+  } catch (err) {
+    // server not running, start it
+  }
+
+  console.log('[Runner] No active server on port 5000. Bootstrapping self-contained test instance...');
+  await connectDB();
+  const count = await Listing.countDocuments();
+  if (count === 0) {
+    console.log('[Runner] Database empty. Seeding initial test listings...');
+    await seedDatabase();
+  }
+
+  await new Promise((resolve) => {
+    localServer = app.listen(5000, () => {
+      console.log('[Runner] Test server actively listening on http://localhost:5000\n');
+      resolve();
+    });
+  });
+}
+
 async function run() {
   console.log('====================================================');
   console.log('   AIRBNB CLONE BACKEND SHADOW RUN TEST SUITE       ');
   console.log('====================================================\n');
 
+  try {
+    await ensureServerRunning();
+  } catch (bootErr) {
+    console.error('Failed to bootstrap test server:', bootErr);
+    process.exit(1);
+  }
+
   let guestToken = null;
+  let refreshTokenVal = null;
   let hostToken = null;
   let sampleListingId = null;
   let createdBookingId = null;
@@ -71,6 +112,7 @@ async function run() {
     const data = await res.json();
     if (res.status === 200 && data.token && data.user) {
       guestToken = data.token;
+      refreshTokenVal = data.refreshToken;
       logPass('4. POST /api/auth/login (Guest Auth)', `Logged in as ${data.user.name} (${data.user.role})`);
     } else {
       throw new Error(data.message || `Status: ${res.status}`);
@@ -375,6 +417,40 @@ async function run() {
     logFail('18. POST /api/listings (Host Create Stay)', err);
   }
 
+  // 19. Rotating Refresh Token Verification
+  try {
+    const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: refreshTokenVal }),
+    });
+    const data = await res.json();
+    if (res.status === 200 && data.token) {
+      logPass('19. POST /api/auth/refresh (Token Rotation)', 'Successfully rotated and issued new access token');
+    } else {
+      throw new Error(data.message || `Status: ${res.status}`);
+    }
+  } catch (err) {
+    logFail('19. POST /api/auth/refresh (Token Rotation)', err);
+  }
+
+  // 20. Zod Schema Validation Rejection Test
+  try {
+    const res = await fetch(`${BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'not-an-email', password: '123' }),
+    });
+    const data = await res.json();
+    if (res.status === 400 && data.message?.includes('Validation failed')) {
+      logPass('20. Zod Schema Middleware Guard', `Intercepted malformed payload: "${data.message}"`);
+    } else {
+      throw new Error(`Expected 400 validation error, got ${res.status}`);
+    }
+  } catch (err) {
+    logFail('20. Zod Schema Middleware Guard', err);
+  }
+
   console.log('\n====================================================');
   console.log('   SHADOW RUN SUMMARY RESULTS                       ');
   console.log('====================================================');
@@ -384,6 +460,12 @@ async function run() {
   console.log(`Passed                 : ${passCount}`);
   console.log(`Failed                 : ${failCount}`);
   console.log(`Success Rate           : ${Math.round((passCount / results.length) * 100)}%\n`);
+
+  if (localServer) {
+    console.log('[Runner] Shutting down self-contained test server...');
+    await new Promise((resolve) => localServer.close(resolve));
+    await disconnectDB();
+  }
 
   if (failCount > 0) {
     process.exit(1);
