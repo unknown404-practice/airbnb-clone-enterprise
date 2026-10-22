@@ -43,3 +43,6 @@ coverage/
 # Temporary / Scratch files
 tmp/
 temp/
+
+# Binary / Assignment Documents
+*.pdf
