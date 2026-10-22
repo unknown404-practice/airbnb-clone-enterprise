@@ -7,7 +7,7 @@ export const connectDB = async () => {
     return mongoose.connection;
   }
 
-  const uri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/airbnb_clone';
+  const uri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/airbnb_clone';
 
   try {
     // Attempt standard connection with 3-second timeout
