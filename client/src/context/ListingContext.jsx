@@ -5,6 +5,7 @@ const ListingContext = createContext(null);
 
 export const ListingProvider = ({ children }) => {
   const [listings, setListings] = useState([]);
+  const [allListings, setAllListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -24,23 +25,72 @@ export const ListingProvider = ({ children }) => {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
-  // Wishlist state persisted in localStorage
+  // Wishlist state persisted in localStorage with deduplication
   const [wishlist, setWishlist] = useState(() => {
     try {
       const saved = localStorage.getItem('airbnb_wishlist');
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? Array.from(new Set(parsed.filter(Boolean))) : [];
     } catch {
       return [];
     }
   });
 
+  // Load master listings once for global lookups (Wishlist, cross-category details)
+  useEffect(() => {
+    let isMounted = true;
+    api
+      .get('/listings')
+      .then((res) => {
+        if (isMounted) {
+          const list = res.data.listings || [];
+          setAllListings(list);
+        }
+      })
+      .catch((err) => console.error('Failed to load master listings:', err));
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Compute verified wishlist count against known valid listings
+  const wishlistCount = React.useMemo(() => {
+    if (!allListings || allListings.length === 0) {
+      return Array.from(new Set(wishlist.filter(Boolean))).length;
+    }
+    const validIds = new Set(allListings.map((l) => l._id));
+    return Array.from(new Set(wishlist.filter((id) => validIds.has(id)))).length;
+  }, [allListings, wishlist]);
+
+  // Automatically prune stale / deleted IDs from localStorage and state
+  useEffect(() => {
+    if (allListings && allListings.length > 0 && wishlist.length > 0) {
+      const validIds = new Set(allListings.map((l) => l._id));
+      const sanitized = Array.from(new Set(wishlist.filter((id) => validIds.has(id))));
+      if (sanitized.length !== wishlist.length) {
+        setWishlist(sanitized);
+        try {
+          localStorage.setItem('airbnb_wishlist', JSON.stringify(sanitized));
+        } catch {
+          // ignore storage error
+        }
+      }
+    }
+  }, [allListings, wishlist]);
+
   const toggleWishlist = (listingId) => {
     setWishlist((prev) => {
-      const next = prev.includes(listingId)
-        ? prev.filter((id) => id !== listingId)
-        : [...prev, listingId];
-      localStorage.setItem('airbnb_wishlist', JSON.stringify(next));
-      return next;
+      const current = Array.isArray(prev) ? prev : [];
+      const next = current.includes(listingId)
+        ? current.filter((id) => id !== listingId)
+        : [...current, listingId];
+      const uniqueNext = Array.from(new Set(next.filter(Boolean)));
+      try {
+        localStorage.setItem('airbnb_wishlist', JSON.stringify(uniqueNext));
+      } catch {
+        // ignore storage error
+      }
+      return uniqueNext;
     });
   };
 
@@ -136,6 +186,8 @@ export const ListingProvider = ({ children }) => {
         isSearchModalOpen,
         setIsSearchModalOpen,
         wishlist,
+        wishlistCount,
+        allListings,
         toggleWishlist,
         fetchListings,
         resetFilters,

@@ -7,7 +7,7 @@ import { useListings } from '../context/ListingContext';
 export default function Footer() {
   const location = useLocation();
   const { isAuthenticated, user, openAuth } = useAuth();
-  const { wishlist } = useListings();
+  const { wishlist, wishlistCount } = useListings();
 
   return (
     <>
@@ -51,9 +51,9 @@ export default function Footer() {
         >
           <Heart size={22} className={location.pathname === '/wishlists' ? 'fill-[#FF385C]' : ''} />
           <span>Wishlists</span>
-          {wishlist.length > 0 && (
+          {wishlistCount > 0 && (
             <span className="absolute -top-1 right-2 w-4 h-4 bg-[#FF385C] text-white rounded-full text-[9px] flex items-center justify-center font-bold shadow-xs">
-              {wishlist.length}
+              {wishlistCount}
             </span>
           )}
         </Link>

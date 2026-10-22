@@ -8,7 +8,7 @@ import { useListings } from '../context/ListingContext';
 export default function Navbar() {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, openAuth, switchRole } = useAuth();
-  const { setIsSearchModalOpen, locationSearch, checkIn, checkOut, guests, wishlist } = useListings();
+  const { setIsSearchModalOpen, locationSearch, checkIn, checkOut, guests, wishlist, wishlistCount } = useListings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -80,11 +80,11 @@ export default function Navbar() {
             to="/wishlists"
             className="hidden md:flex items-center space-x-1.5 py-2 px-3 rounded-full text-xs font-semibold text-gray-800 hover:bg-gray-100 transition-colors"
           >
-            <Heart size={16} className={wishlist.length > 0 ? "text-[#FF385C] fill-[#FF385C]" : "text-gray-700"} />
+            <Heart size={16} className={wishlistCount > 0 ? "text-[#FF385C] fill-[#FF385C]" : "text-gray-700"} />
             <span>Wishlists</span>
-            {wishlist.length > 0 && (
+            {wishlistCount > 0 && (
               <span className="ml-1 px-1.5 py-0.2 rounded-full bg-[#FF385C] text-white text-[10px] font-bold">
-                {wishlist.length}
+                {wishlistCount}
               </span>
             )}
           </Link>
@@ -148,12 +148,12 @@ export default function Navbar() {
                       className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 text-gray-800 transition-colors"
                     >
                       <div className="flex items-center space-x-3">
-                        <Heart size={16} className={wishlist.length > 0 ? "text-[#FF385C] fill-[#FF385C]" : "text-gray-500"} />
+                        <Heart size={16} className={wishlistCount > 0 ? "text-[#FF385C] fill-[#FF385C]" : "text-gray-500"} />
                         <span>Wishlists</span>
                       </div>
-                      {wishlist.length > 0 && (
+                      {wishlistCount > 0 && (
                         <span className="px-2 py-0.5 rounded-full bg-rose-50 text-[#FF385C] text-xs font-bold">
-                          {wishlist.length}
+                          {wishlistCount}
                         </span>
                       )}
                     </Link>
@@ -224,12 +224,12 @@ export default function Navbar() {
                       className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 text-gray-700 transition-colors"
                     >
                       <div className="flex items-center space-x-3">
-                        <Heart size={16} className={wishlist.length > 0 ? "text-[#FF385C] fill-[#FF385C]" : "text-gray-500"} />
+                        <Heart size={16} className={wishlistCount > 0 ? "text-[#FF385C] fill-[#FF385C]" : "text-gray-500"} />
                         <span>Wishlists</span>
                       </div>
-                      {wishlist.length > 0 && (
+                      {wishlistCount > 0 && (
                         <span className="px-2 py-0.5 rounded-full bg-rose-50 text-[#FF385C] text-xs font-bold">
-                          {wishlist.length}
+                          {wishlistCount}
                         </span>
                       )}
                     </Link>

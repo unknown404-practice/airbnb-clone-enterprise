@@ -8,11 +8,12 @@ import ListingMap from '../components/ListingMap';
 
 export default function WishlistPage() {
   const navigate = useNavigate();
-  const { listings, wishlist, toggleWishlist } = useListings();
+  const { listings, allListings, wishlist, wishlistCount } = useListings();
   const [showMap, setShowMap] = useState(false);
 
-  // Filter listings that are in the user's wishlist
-  const wishlistedListings = listings.filter((l) => wishlist.includes(l._id));
+  // Master catalog directory ensures wishlist shows all saved stays across all categories
+  const sourceCatalog = allListings && allListings.length > 0 ? allListings : listings;
+  const wishlistedListings = sourceCatalog.filter((l) => wishlist.includes(l._id));
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFAFA] pb-24 md:pb-16">
