@@ -19,6 +19,7 @@ An enterprise-grade, production-tested Full-Stack Airbnb Clone developed as an e
 
 - **Live Application (Frontend)**: [https://airbnb-clone-enterprise.vercel.app](https://airbnb-clone-enterprise.vercel.app)
 - **Production API Server (Backend)**: [https://airbnb-backend-api-wiks.onrender.com](https://airbnb-backend-api-wiks.onrender.com)
+- **Listings API Endpoint (Live JSON Data)**: [https://airbnb-backend-api-wiks.onrender.com/api/listings](https://airbnb-backend-api-wiks.onrender.com/api/listings)
 - **API Health Check**: [https://airbnb-backend-api-wiks.onrender.com/api/health](https://airbnb-backend-api-wiks.onrender.com/api/health)
 
 ---
@@ -167,8 +168,10 @@ npm run test:backend
 [PASS] 16. GET /api/listings/host/my-listings (Host Dashboard)
 [PASS] 17. POST /api/reviews (Review & Rating Pipeline)
 [PASS] 18. POST /api/listings (Host Create Stay)
+[PASS] 19. POST /api/auth/refresh (Token Rotation)
+[PASS] 20. Zod Schema Middleware Guard (Input Validation)
 ====================================================
-Total Endpoints Tested : 18 | Passed: 18 | Failed: 0
+Total Endpoints Tested : 20 | Passed: 20 | Failed: 0
 Success Rate           : 100%
 ====================================================
 ```
@@ -181,8 +184,9 @@ Success Rate           : 100%
 |---|---|---|---|
 | `GET` | `/` | Public | Root API index, health status & endpoint directory |
 | `GET` | `/api/health` | Public | System status check & timestamp |
-| `POST` | `/api/auth/register` | Public | Register new guest or host account |
-| `POST` | `/api/auth/login` | Public | Authenticate credentials & issue JWT token |
+| `POST` | `/api/auth/register` | Public | Register new guest or host account (Zod validated) |
+| `POST` | `/api/auth/login` | Public | Authenticate credentials, issue access & refresh tokens |
+| `POST` | `/api/auth/refresh` | Public | Rotate 15-minute access token via HTTP-only refresh cookie |
 | `GET` | `/api/auth/login` | Public | Informational demo accounts directory |
 | `GET` | `/api/auth/me` | Authenticated | Retrieve authenticated user profile |
 | `GET` | `/api/listings` | Public | Retrieve properties (supports `?category=`, `?search=`) |
