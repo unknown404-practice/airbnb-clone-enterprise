@@ -1,0 +1,13 @@
+{
+  "name": "project-airbnb",
+  "version": "1.0.0",
+  "description": "Full-Stack Enterprise Airbnb Clone Capstone Project",
+  "private": true,
+  "scripts": {
+    "dev:server": "node server/src/server.js",
+    "dev:client": "npm --prefix client run dev",
+    "build:client": "npm --prefix client run build",
+    "test:backend": "node server/src/scripts/shadowRunBackend.js",
+    "seed": "node server/src/seeds/seed.js"
+  }
+}
