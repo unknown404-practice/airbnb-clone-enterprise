@@ -15,6 +15,14 @@ An enterprise-grade, production-tested Full-Stack Airbnb Clone developed as an e
 
 ---
 
+## 🚀 Production Live URLs
+
+- **Live Application (Frontend)**: [https://airbnb-clone-enterprise.vercel.app](https://airbnb-clone-enterprise.vercel.app)
+- **Production API Server (Backend)**: [https://airbnb-backend-api-wiks.onrender.com](https://airbnb-backend-api-wiks.onrender.com)
+- **API Health Check**: [https://airbnb-backend-api-wiks.onrender.com/api/health](https://airbnb-backend-api-wiks.onrender.com/api/health)
+
+---
+
 ## 👨‍💻 Author & Engineering Profile
 
 - **Author**: Ranadeep Saha
