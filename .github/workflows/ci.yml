@@ -22,11 +22,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-          cache-dependency-path: './client/package-lock.json'
 
       - name: Install Client Dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build Vite Production Assets
         run: npm run build
@@ -46,11 +44,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-          cache-dependency-path: './server/package-lock.json'
 
       - name: Install Server Dependencies
-        run: npm ci
+        run: npm install
 
       - name: Execute Server Test Suite
         run: npm test
